@@ -1,0 +1,28 @@
+<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- QR Code Pattern -->
+  <rect x="0" y="0" width="80" height="80" fill="white"/>
+  
+  <!-- Corner squares -->
+  <rect x="5" y="5" width="20" height="20" fill="black"/>
+  <rect x="55" y="5" width="20" height="20" fill="black"/>
+  <rect x="5" y="55" width="20" height="20" fill="black"/>
+  
+  <!-- Inner corner squares -->
+  <rect x="10" y="10" width="10" height="10" fill="white"/>
+  <rect x="60" y="10" width="10" height="10" fill="white"/>
+  <rect x="10" y="60" width="10" height="10" fill="white"/>
+  
+  <!-- Center squares -->
+  <rect x="13" y="13" width="4" height="4" fill="black"/>
+  <rect x="63" y="13" width="4" height="4" fill="black"/>
+  <rect x="13" y="63" width="4" height="4" fill="black"/>
+  
+  <!-- Random pattern to simulate QR -->
+  <rect x="35" y="35" width="10" height="10" fill="black"/>
+  <rect x="30" y="15" width="5" height="5" fill="black"/>
+  <rect x="45" y="25" width="5" height="5" fill="black"/>
+  <rect x="15" y="40" width="5" height="5" fill="black"/>
+  <rect x="50" y="45" width="5" height="5" fill="black"/>
+  <rect x="25" y="60" width="5" height="5" fill="black"/>
+  <rect x="60" y="30" width="5" height="5" fill="black"/>
+</svg>
