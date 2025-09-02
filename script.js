@@ -22,6 +22,7 @@ class SkinnersRestaurant {
 
   setupComponents() {
     this.setupNavigation();
+    this.setupHeroSlider();
     this.setupMenuTabs();
     this.setupGalleryLightbox();
     this.setupScrollAnimations();
@@ -32,7 +33,7 @@ class SkinnersRestaurant {
   }
 
   /**
-   * Navigation System
+   * Navigation System - Mobile-First Approach
    */
   setupNavigation() {
     const nav = document.querySelector('.main-nav');
@@ -40,18 +41,32 @@ class SkinnersRestaurant {
     const navMenu = document.getElementById('navMenu');
     const navLinks = document.querySelectorAll('.nav-links a');
 
-    // Scroll effect for navigation
+    // Scroll effect for navigation - optimized for mobile
     let lastScrollTop = 0;
     let ticking = false;
+    let scrollTimeout = null;
 
     const updateNav = () => {
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const scrollDelta = Math.abs(scrollTop - lastScrollTop);
       
-      // Add/remove scrolled class
-      if (scrollTop > 100) {
-        nav.classList.add('scrolled');
-      } else {
-        nav.classList.remove('scrolled');
+      // Only trigger effects if scroll is significant (reduces mobile jank)
+      if (scrollDelta > 5) {
+        // Add/remove scrolled class with mobile-friendly threshold
+        if (scrollTop > 50) {
+          nav.classList.add('scrolled');
+        } else {
+          nav.classList.remove('scrolled');
+        }
+
+        // Auto-hide navigation on scroll down (mobile UX improvement)
+        if (window.innerWidth <= 768) {
+          if (scrollTop > lastScrollTop && scrollTop > 200) {
+            nav.classList.add('nav-hidden');
+          } else {
+            nav.classList.remove('nav-hidden');
+          }
+        }
       }
 
       lastScrollTop = scrollTop;
@@ -65,29 +80,62 @@ class SkinnersRestaurant {
       }
     };
 
-    window.addEventListener('scroll', requestTick, { passive: true });
+    // Throttled scroll listener for better mobile performance
+    window.addEventListener('scroll', () => {
+      requestTick();
+      
+      // Clear any existing timeout
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+      
+      // Show nav after scroll ends (mobile UX)
+      scrollTimeout = setTimeout(() => {
+        nav.classList.remove('nav-hidden');
+      }, 150);
+    }, { passive: true });
 
-    // Hamburger menu toggle
+    // Enhanced mobile hamburger menu
     if (hamburger && navMenu) {
-      hamburger.addEventListener('click', () => {
+      // Touch-friendly click handler
+      const toggleMenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
         const isOpen = hamburger.classList.contains('active');
         
         hamburger.classList.toggle('active');
         navMenu.classList.toggle('active');
         hamburger.setAttribute('aria-expanded', !isOpen);
 
-        // Prevent body scroll when menu is open
+        // Enhanced mobile menu behavior
         if (!isOpen) {
           document.body.style.overflow = 'hidden';
+          document.body.style.position = 'fixed';
+          document.body.style.width = '100%';
+          navMenu.style.paddingTop = nav.offsetHeight + 'px';
         } else {
           document.body.style.overflow = '';
+          document.body.style.position = '';
+          document.body.style.width = '';
+        }
+      };
+
+      hamburger.addEventListener('click', toggleMenu);
+      hamburger.addEventListener('touchend', toggleMenu);
+      
+      // Keyboard accessibility
+      hamburger.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleMenu(e);
         }
       });
     }
 
-    // Smooth scroll for navigation links
+    // Enhanced smooth scroll for navigation links (mobile-optimized)
     navLinks.forEach(link => {
-      link.addEventListener('click', (e) => {
+      const handleNavClick = (e) => {
         const href = link.getAttribute('href');
         
         if (href.startsWith('#')) {
@@ -97,25 +145,38 @@ class SkinnersRestaurant {
           
           if (targetElement) {
             const navHeight = nav.offsetHeight;
-            const targetPosition = targetElement.offsetTop - navHeight - 20;
+            // Mobile-specific offset adjustment
+            const mobileOffset = window.innerWidth <= 768 ? 10 : 20;
+            const targetPosition = targetElement.offsetTop - navHeight - mobileOffset;
             
             window.scrollTo({
-              top: targetPosition,
+              top: Math.max(0, targetPosition),
               behavior: 'smooth'
             });
 
-            // Close mobile menu if open
-            hamburger?.classList.remove('active');
-            navMenu?.classList.remove('active');
-            hamburger?.setAttribute('aria-expanded', 'false');
-            document.body.style.overflow = '';
+            // Close mobile menu with enhanced animation
+            if (hamburger && navMenu) {
+              hamburger.classList.remove('active');
+              navMenu.classList.remove('active');
+              hamburger.setAttribute('aria-expanded', 'false');
+              document.body.style.overflow = '';
+              document.body.style.position = '';
+              document.body.style.width = '';
+            }
           }
         }
+      };
+
+      link.addEventListener('click', handleNavClick);
+      link.addEventListener('touchend', (e) => {
+        // Prevent double-tap zoom on mobile
+        e.preventDefault();
+        handleNavClick(e);
       });
     });
 
-    // Close menu when clicking outside
-    document.addEventListener('click', (e) => {
+    // Enhanced click-outside behavior for mobile
+    const closeMenuOnOutsideClick = (e) => {
       if (navMenu?.classList.contains('active') && 
           !navMenu.contains(e.target) && 
           !hamburger?.contains(e.target)) {
@@ -123,8 +184,97 @@ class SkinnersRestaurant {
         navMenu?.classList.remove('active');
         hamburger?.setAttribute('aria-expanded', 'false');
         document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
       }
+    };
+
+    document.addEventListener('click', closeMenuOnOutsideClick);
+    document.addEventListener('touchend', closeMenuOnOutsideClick);
+
+    // Handle orientation change (mobile)
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => {
+        // Close menu on orientation change
+        if (hamburger && navMenu) {
+          hamburger.classList.remove('active');
+          navMenu.classList.remove('active');
+          hamburger.setAttribute('aria-expanded', 'false');
+          document.body.style.overflow = '';
+          document.body.style.position = '';
+          document.body.style.width = '';
+        }
+      }, 100);
     });
+  }
+
+  /**
+   * Hero Slider with Touch Support
+   */
+  setupHeroSlider() {
+    const slides = document.querySelectorAll('.hero-slide');
+    if (!slides.length) return;
+
+    let currentSlide = 0;
+    let touchStartX = 0;
+    let touchEndX = 0;
+    let isTransitioning = false;
+
+    const showSlide = (index) => {
+      if (isTransitioning) return;
+      isTransitioning = true;
+
+      slides.forEach((slide, i) => {
+        slide.style.opacity = i === index ? '1' : '0';
+        slide.style.zIndex = i === index ? '1' : '0';
+      });
+
+      setTimeout(() => {
+        isTransitioning = false;
+      }, 600);
+    };
+
+    const nextSlide = () => {
+      currentSlide = (currentSlide + 1) % slides.length;
+      showSlide(currentSlide);
+    };
+
+    const prevSlide = () => {
+      currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+      showSlide(currentSlide);
+    };
+
+    // Auto-advance slides every 5 seconds
+    setInterval(nextSlide, 5000);
+
+    // Touch support for mobile swiping
+    const heroBackground = document.querySelector('.hero-background');
+    if (heroBackground) {
+      heroBackground.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+      }, { passive: true });
+
+      heroBackground.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].clientX;
+        handleSwipe();
+      }, { passive: true });
+
+      const handleSwipe = () => {
+        const swipeThreshold = 50;
+        const diff = touchStartX - touchEndX;
+
+        if (Math.abs(diff) > swipeThreshold) {
+          if (diff > 0) {
+            nextSlide();
+          } else {
+            prevSlide();
+          }
+        }
+      };
+    }
+
+    // Initialize first slide
+    showSlide(0);
   }
 
   /**
@@ -191,7 +341,7 @@ class SkinnersRestaurant {
   }
 
   /**
-   * Gallery Lightbox System
+   * Gallery Lightbox System - Enhanced for Mobile
    */
   setupGalleryLightbox() {
     const galleryItems = document.querySelectorAll('.gallery-item');
@@ -204,6 +354,11 @@ class SkinnersRestaurant {
     if (!galleryItems.length || !lightbox) return;
 
     let currentImageIndex = 0;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+    
     const images = Array.from(galleryItems).map(item => {
       const img = item.querySelector('img');
       return {
@@ -226,12 +381,19 @@ class SkinnersRestaurant {
       
       // Prevent body scroll
       document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      
+      // Preload adjacent images for smooth navigation
+      this.preloadAdjacentImages(index);
     };
 
     const closeLightbox = () => {
       lightbox.classList.remove('active');
       lightbox.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
       
       // Return focus to the clicked gallery item
       galleryItems[currentImageIndex]?.focus();
@@ -240,15 +402,25 @@ class SkinnersRestaurant {
     const showNextImage = () => {
       currentImageIndex = (currentImageIndex + 1) % images.length;
       const image = images[currentImageIndex];
-      lightboxImg.src = image.src;
-      lightboxImg.alt = image.alt;
+      lightboxImg.style.opacity = '0';
+      setTimeout(() => {
+        lightboxImg.src = image.src;
+        lightboxImg.alt = image.alt;
+        lightboxImg.style.opacity = '1';
+      }, 150);
+      this.preloadAdjacentImages(currentImageIndex);
     };
 
     const showPrevImage = () => {
       currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
       const image = images[currentImageIndex];
-      lightboxImg.src = image.src;
-      lightboxImg.alt = image.alt;
+      lightboxImg.style.opacity = '0';
+      setTimeout(() => {
+        lightboxImg.src = image.src;
+        lightboxImg.alt = image.alt;
+        lightboxImg.style.opacity = '1';
+      }, 150);
+      this.preloadAdjacentImages(currentImageIndex);
     };
 
     // Add click listeners to gallery items
@@ -264,6 +436,38 @@ class SkinnersRestaurant {
       });
     });
 
+    // Touch support for mobile swiping in lightbox
+    if (lightbox) {
+      lightbox.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+
+      lightbox.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].clientX;
+        touchEndY = e.changedTouches[0].clientY;
+        handleLightboxSwipe();
+      }, { passive: true });
+
+      const handleLightboxSwipe = () => {
+        const swipeThreshold = 50;
+        const diffX = touchStartX - touchEndX;
+        const diffY = touchStartY - touchEndY;
+
+        // Only handle horizontal swipes (ignore vertical scrolls)
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > swipeThreshold) {
+          if (diffX > 0) {
+            showNextImage();
+          } else {
+            showPrevImage();
+          }
+        } else if (Math.abs(diffY) > swipeThreshold && diffY > 0) {
+          // Swipe up to close
+          closeLightbox();
+        }
+      };
+    }
+
     // Lightbox controls
     closeBtn?.addEventListener('click', closeLightbox);
     prevBtn?.addEventListener('click', showPrevImage);
@@ -276,7 +480,7 @@ class SkinnersRestaurant {
       }
     });
 
-    // Keyboard navigation
+    // Enhanced keyboard navigation
     document.addEventListener('keydown', (e) => {
       if (!lightbox?.classList.contains('active')) return;
 
@@ -285,12 +489,30 @@ class SkinnersRestaurant {
           closeLightbox();
           break;
         case 'ArrowRight':
+          e.preventDefault();
           showNextImage();
           break;
         case 'ArrowLeft':
+          e.preventDefault();
           showPrevImage();
           break;
       }
+    });
+
+    // Add smooth image transition
+    if (lightboxImg) {
+      lightboxImg.style.transition = 'opacity 0.15s ease-in-out';
+    }
+  }
+
+  preloadAdjacentImages(currentIndex) {
+    const images = document.querySelectorAll('.gallery-item img');
+    const prevIndex = (currentIndex - 1 + images.length) % images.length;
+    const nextIndex = (currentIndex + 1) % images.length;
+    
+    [prevIndex, nextIndex].forEach(index => {
+      const img = new Image();
+      img.src = images[index].src;
     });
   }
 
